@@ -34,12 +34,27 @@ run().catch(err => console.log(err.message.red.bold))
 
 //collections
 const usersCollection = client.db('TruckBazar').collection('users')
+const ProductsCollection = client.db('TruckBazar').collection('Products')
 
 //api's / endspoints
 
 //root api
 app.get('/', (req, res) => {
     res.send('truck-Bazar-server is running')
+})
+
+//api for getting categories
+app.get('/category/:id', async (req, res) => {
+    try {
+        const id = req.params.id
+        console.log(id);
+        const query = { CategoryName: id }
+        const categories = await ProductsCollection.find(query).toArray()
+        res.send(categories)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
 })
 
 //api for posting user info in db
