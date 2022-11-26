@@ -37,6 +37,25 @@ const usersCollection = client.db('TruckBazar').collection('users')
 const ProductsCollection = client.db('TruckBazar').collection('Products')
 const BookingsCollection = client.db('TruckBazar').collection('Bookings')
 
+//common funcions 
+
+//1
+function verifyJwt(req, res, next) {
+    const authHeader = req.headers.authorization
+    if (!authHeader) {
+        return res.status(401).send({ message: 'unauthorized access' })
+    }
+
+    const token = authHeader.split(' ')[1]
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: 'forbidden access' })
+        }
+        req.decoded = decoded
+        next()
+    })
+}
+
 //api's / endspoints
 
 //root api
@@ -45,10 +64,9 @@ app.get('/', (req, res) => {
 })
 
 //api for getting categories
-app.get('/category/:id', async (req, res) => {
+app.get('/category/:id', verifyJwt, async (req, res) => {
     try {
         const id = req.params.id
-        console.log(id);
         const query = { CategoryName: id }
         const categories = await ProductsCollection.find(query).toArray()
         res.send(categories)
@@ -64,6 +82,32 @@ app.post('/users', async (req, res) => {
         const user = req.body
         const result = await usersCollection.insertOne(user)
         res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for verifying user admin or not from db
+app.get('/users/admin/:email', async (req, res) => {
+    try {
+        const email = req.params.email
+        const query = { email }
+        const user = await usersCollection.findOne(query)
+        res.send({ isAdmin: user?.role === 'admin' })
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for verifying user seller or not from db
+app.get('/users/seller/:email', async (req, res) => {
+    try {
+        const email = req.params.email
+        const query = { email }
+        const user = await usersCollection.findOne(query)
+        res.send({ isSeller: user?.role === 'Seller' })
     }
     catch (error) {
         res.send(error.message)
