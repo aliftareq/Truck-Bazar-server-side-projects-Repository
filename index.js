@@ -35,6 +35,7 @@ run().catch(err => console.log(err.message.red.bold))
 //collections
 const usersCollection = client.db('TruckBazar').collection('users')
 const ProductsCollection = client.db('TruckBazar').collection('Products')
+const BookingsCollection = client.db('TruckBazar').collection('Bookings')
 
 //api's / endspoints
 
@@ -62,6 +63,18 @@ app.post('/users', async (req, res) => {
     try {
         const user = req.body
         const result = await usersCollection.insertOne(user)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for posting bboking info in db
+app.post('/bookings', async (req, res) => {
+    try {
+        const booking = req.body
+        const result = await BookingsCollection.insertOne(booking)
         res.send(result)
     }
     catch (error) {
