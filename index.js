@@ -87,6 +87,18 @@ app.get('/category/:id', verifyJwt, async (req, res) => {
     }
 })
 
+//api for adding products
+app.post('/addproduct', async (req, res) => {
+    try {
+        const product = req.body
+        const result = await ProductsCollection.insertOne(product)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
 
 //--------------------------------------------------//
 
@@ -95,6 +107,20 @@ app.post('/users', async (req, res) => {
     try {
         const user = req.body
         const result = await usersCollection.insertOne(user)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for getting a single user info from db
+app.get('/user', async (req, res) => {
+    try {
+        const email = req.query.email
+        const query = { email }
+        console.log(query);
+        const result = await usersCollection.findOne(query)
         res.send(result)
     }
     catch (error) {
@@ -250,6 +276,16 @@ app.post('/bookings', async (req, res) => {
     try {
         const booking = req.body
         const result = await BookingsCollection.insertOne(booking)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+app.get('/bookings', async (req, res) => {
+    try {
+        const query = {}
+        const result = await BookingsCollection.find(query).toArray()
         res.send(result)
     }
     catch (error) {
