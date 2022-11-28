@@ -87,12 +87,65 @@ app.get('/category/:id', verifyJwt, async (req, res) => {
     }
 })
 
+//api for getting categories
+app.get('/myproducts', async (req, res) => {
+    try {
+        const email = req.query.email
+        const query = { seller_email: email }
+        const products = await ProductsCollection.find(query).toArray()
+        res.send(products)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
 //api for adding products
 app.post('/addproduct', async (req, res) => {
     try {
         const product = req.body
         const result = await ProductsCollection.insertOne(product)
         res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for deleting products
+app.delete('/deleteproduct/:id', async (req, res) => {
+    try {
+        const id = req.params.id
+        const query = { _id: ObjectId(id) }
+        const result = await ProductsCollection.deleteOne(query)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for advertising products .
+app.put('/product/advertise/:id', async (req, res) => {
+    try {
+        const id = req.params.id
+        const filter = { _id: ObjectId(id) }
+        const option = { upsert: true }
+        const updatedDoc = { $set: { advertise: true } }
+        const result = await ProductsCollection.updateOne(filter, updatedDoc, option)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for getting advertise product
+app.get('/advertiseProducts', async (req, res) => {
+    try {
+        const query = { advertise: true }
+        const products = await ProductsCollection.find(query).toArray()
+        res.send(products)
     }
     catch (error) {
         res.send(error.message)
@@ -119,7 +172,6 @@ app.get('/user', async (req, res) => {
     try {
         const email = req.query.email
         const query = { email }
-        console.log(query);
         const result = await usersCollection.findOne(query)
         res.send(result)
     }
