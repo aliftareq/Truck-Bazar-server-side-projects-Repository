@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const cors = require('cors')
 const jwt = require('jsonwebtoken');
@@ -56,6 +56,17 @@ function verifyJwt(req, res, next) {
     })
 }
 
+//2 (admin varifying function)
+const verifyAdmin = async (req, res, next) => {
+    const decodedEmail = req.decoded.email
+    const query = { email: decodedEmail }
+    const user = await usersCollection.findOne(query)
+    if (user?.role !== 'admin') {
+        return res.status(403).send({ message: 'forbidden access' })
+    }
+    next()
+}
+
 //api's / endspoints
 
 //root api
@@ -76,6 +87,9 @@ app.get('/category/:id', verifyJwt, async (req, res) => {
     }
 })
 
+
+//--------------------------------------------------//
+
 //api for posting user info in db
 app.post('/users', async (req, res) => {
     try {
@@ -87,6 +101,108 @@ app.post('/users', async (req, res) => {
         res.send(error.message)
     }
 })
+
+//api for getting all sellers info from db
+app.get('/sellers', async (req, res) => {
+    try {
+        const query = { role: "Seller" }
+        const users = await usersCollection.find(query).toArray()
+        res.send(users)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for getting all sellers info from db
+app.get('/buyers', async (req, res) => {
+    try {
+        const query = { role: "Buyer" }
+        const users = await usersCollection.find(query).toArray()
+        res.send(users)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for getting all sellers info from db
+app.get('/admin', async (req, res) => {
+    try {
+        const query = { role: "admin" }
+        const users = await usersCollection.find(query).toArray()
+        res.send(users)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//-------------------------------------------//
+
+
+//-----------------------api's for update and delete operation----------------------//
+
+//api for updating user role to admin .
+app.put('/users/admin/:id', verifyJwt, verifyAdmin, async (req, res) => {
+    try {
+        const id = req.params.id
+        const filter = { _id: ObjectId(id) }
+        const option = { upsert: true }
+        const updatedDoc = { $set: { role: 'admin' } }
+        const result = await usersCollection.updateOne(filter, updatedDoc, option)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for updating user role admin to buyer(removing from admin) .
+app.put('/users/remove-from-admin/:id', verifyJwt, verifyAdmin, async (req, res) => {
+    try {
+        const id = req.params.id
+        const filter = { _id: ObjectId(id) }
+        const option = { upsert: true }
+        const updatedDoc = { $set: { role: 'Buyer' } }
+        const result = await usersCollection.updateOne(filter, updatedDoc, option)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for updating user varification(varified or not varified).
+app.put('/users/verify/:id', verifyJwt, verifyAdmin, async (req, res) => {
+    try {
+        const id = req.params.id
+        const filter = { _id: ObjectId(id) }
+        const option = { upsert: true }
+        const updatedDoc = { $set: { seller_verification: true } }
+        const result = await usersCollection.updateOne(filter, updatedDoc, option)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for deleting user from database( N.B. : user will be only remove from database not from firebase) .
+app.delete('/users/delete/:id', verifyJwt, verifyAdmin, async (req, res) => {
+    try {
+        const id = req.params.id
+        const query = { _id: ObjectId(id) }
+        const result = await usersCollection.deleteOne(query)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+
+//------------------------------api's for verification for hooks-------------------//
 
 //api for verifying user admin or not from db
 app.get('/users/admin/:email', async (req, res) => {
@@ -127,7 +243,9 @@ app.get('/users/buyer/:email', async (req, res) => {
     }
 })
 
-//api for posting bboking info in db
+//----------------------------------------------------------------------------//
+
+//api for posting booking info in db
 app.post('/bookings', async (req, res) => {
     try {
         const booking = req.body
