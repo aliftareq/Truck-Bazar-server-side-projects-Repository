@@ -114,6 +114,19 @@ app.get('/users/seller/:email', async (req, res) => {
     }
 })
 
+//api for verifying user seller or not from db
+app.get('/users/buyer/:email', async (req, res) => {
+    try {
+        const email = req.params.email
+        const query = { email }
+        const user = await usersCollection.findOne(query)
+        res.send({ isSeller: user?.role === 'Buyer' })
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
 //api for posting bboking info in db
 app.post('/bookings', async (req, res) => {
     try {
