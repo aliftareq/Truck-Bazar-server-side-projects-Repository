@@ -68,6 +68,17 @@ const verifyAdmin = async (req, res, next) => {
     next()
 }
 
+//3 (seller varifying function)
+const verifySeller = async (req, res, next) => {
+    const decodedEmail = req.decoded.email
+    const query = { email: decodedEmail }
+    const user = await usersCollection.findOne(query)
+    if (user?.role !== 'Seller') {
+        return res.status(403).send({ message: 'forbidden access' })
+    }
+    next()
+}
+
 //api's / endspoints
 
 //root api
@@ -91,7 +102,7 @@ app.get('/category/:id', verifyJwt, async (req, res) => {
 })
 
 //api for getting products for a single seller
-app.get('/myproducts', async (req, res) => {
+app.get('/myproducts', verifyJwt, verifySeller, async (req, res) => {
     try {
         const email = req.query.email
         const query = { seller_email: email }
@@ -104,7 +115,7 @@ app.get('/myproducts', async (req, res) => {
 })
 
 //api for adding products
-app.post('/addproduct', async (req, res) => {
+app.post('/addproduct', verifyJwt, verifySeller, async (req, res) => {
     try {
         const product = req.body
         const result = await ProductsCollection.insertOne(product)
@@ -131,7 +142,7 @@ app.put('/product/reportItems/:id', async (req, res) => {
 })
 
 //api for getting reported product
-app.get('/product/reportedItems', async (req, res) => {
+app.get('/product/reportedItems', verifyJwt, verifyAdmin, async (req, res) => {
     try {
         const query = { reported: true }
         const reportedProducts = await ProductsCollection.find(query).toArray()
@@ -156,7 +167,7 @@ app.delete('/deleteproduct/:id', async (req, res) => {
 })
 
 //api for updating advertising status of a products .
-app.put('/product/advertise/:id', async (req, res) => {
+app.put('/product/advertise/:id', verifyJwt, verifySeller, async (req, res) => {
     try {
         const id = req.params.id
         const filter = { _id: ObjectId(id) }
@@ -212,7 +223,7 @@ app.get('/user', async (req, res) => {
 })
 
 //api for getting all sellers info from db
-app.get('/sellers', async (req, res) => {
+app.get('/sellers', verifyJwt, verifyAdmin, async (req, res) => {
     try {
         const query = { role: "Seller" }
         const users = await usersCollection.find(query).toArray()
@@ -224,7 +235,7 @@ app.get('/sellers', async (req, res) => {
 })
 
 //api for getting all sellers info from db
-app.get('/buyers', async (req, res) => {
+app.get('/buyers', verifyJwt, verifyAdmin, async (req, res) => {
     try {
         const query = { role: "Buyer" }
         const users = await usersCollection.find(query).toArray()
@@ -236,7 +247,7 @@ app.get('/buyers', async (req, res) => {
 })
 
 //api for getting all sellers info from db
-app.get('/admin', async (req, res) => {
+app.get('/admin', verifyJwt, verifyAdmin, async (req, res) => {
     try {
         const query = { role: "admin" }
         const users = await usersCollection.find(query).toArray()
@@ -355,7 +366,7 @@ app.get('/users/buyer/:email', async (req, res) => {
 //----------------------------------------------------------------------------//
 
 //api for posting booking info in db
-app.post('/bookings', async (req, res) => {
+app.post('/bookings', verifyJwt, async (req, res) => {
     try {
         const booking = req.body
         const result = await BookingsCollection.insertOne(booking)
@@ -367,7 +378,7 @@ app.post('/bookings', async (req, res) => {
 })
 
 //api for getting booking info for a singel user
-app.get('/bookings', async (req, res) => {
+app.get('/bookings', verifyJwt, async (req, res) => {
     try {
         const email = req.query.email
         const query = { buyer_email: email }
@@ -397,7 +408,7 @@ app.get('/booking/:id', async (req, res) => {
 //---------------api's for payment task--------------------------//
 
 //api for payment gateway...
-app.post('/create-payment-intent', async (req, res) => {
+app.post('/create-payment-intent', verifyJwt, async (req, res) => {
     try {
         const booking = req.body
         const price = booking.product_price
@@ -420,7 +431,7 @@ app.post('/create-payment-intent', async (req, res) => {
 })
 
 //api for store payments data
-app.post('/payments', async (req, res) => {
+app.post('/payments', verifyJwt, async (req, res) => {
     try {
         const payment = req.body
         const result = await PaymentsCollection.insertOne(payment)
