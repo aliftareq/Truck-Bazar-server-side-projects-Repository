@@ -115,6 +115,33 @@ app.post('/addproduct', async (req, res) => {
     }
 })
 
+//api for updating reported products .
+app.put('/product/reportItems/:id', async (req, res) => {
+    try {
+        const id = req.params.id
+        const filter = { _id: ObjectId(id) }
+        const option = { upsert: true }
+        const updatedDoc = { $set: { reported: true } }
+        const result = await ProductsCollection.updateOne(filter, updatedDoc, option)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for getting reported product
+app.get('/product/reportedItems', async (req, res) => {
+    try {
+        const query = { reported: true }
+        const reportedProducts = await ProductsCollection.find(query).toArray()
+        res.send(reportedProducts)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
 //api for deleting products
 app.delete('/deleteproduct/:id', async (req, res) => {
     try {
