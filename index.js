@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 require('colors')
 require('dotenv').config()
 
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express()
 const port = process.env.PORT || 5000;
@@ -36,6 +36,7 @@ run().catch(err => console.log(err.message.red.bold))
 const usersCollection = client.db('TruckBazar').collection('users')
 const ProductsCollection = client.db('TruckBazar').collection('Products')
 const BookingsCollection = client.db('TruckBazar').collection('Bookings')
+const PaymentsCollection = client.db('TruckBazar').collection('payments')
 
 //common funcions 
 
@@ -74,20 +75,22 @@ app.get('/', (req, res) => {
     res.send('truck-Bazar-server is running')
 })
 
-//api for getting categories
+//api for getting category base product
 app.get('/category/:id', verifyJwt, async (req, res) => {
     try {
         const id = req.params.id
-        const query = { CategoryName: id }
-        const categories = await ProductsCollection.find(query).toArray()
-        res.send(categories)
+        const query1 = { CategoryName: id }
+        const query2 = { CategoryName: id, paid: true }
+        const allProducts = await ProductsCollection.find(query1).toArray()
+        let remainingProducts = allProducts.filter(product => product.paid !== true)
+        res.send(remainingProducts)
     }
     catch (error) {
         res.send(error.message)
     }
 })
 
-//api for getting categories
+//api for getting products for a single seller
 app.get('/myproducts', async (req, res) => {
     try {
         const email = req.query.email
@@ -125,7 +128,7 @@ app.delete('/deleteproduct/:id', async (req, res) => {
     }
 })
 
-//api for advertising products .
+//api for updating advertising status of a products .
 app.put('/product/advertise/:id', async (req, res) => {
     try {
         const id = req.params.id
@@ -145,7 +148,8 @@ app.get('/advertiseProducts', async (req, res) => {
     try {
         const query = { advertise: true }
         const products = await ProductsCollection.find(query).toArray()
-        res.send(products)
+        const NonadvertiseProducts = products.filter(product => product.paid !== true)
+        res.send(NonadvertiseProducts)
     }
     catch (error) {
         res.send(error.message)
@@ -153,7 +157,7 @@ app.get('/advertiseProducts', async (req, res) => {
 })
 
 
-//--------------------------------------------------//
+//----------following api's are for managing users(buyer,seller/admin)-----------------//
 
 //api for posting user info in db
 app.post('/users', async (req, res) => {
@@ -308,7 +312,7 @@ app.get('/users/seller/:email', async (req, res) => {
     }
 })
 
-//api for verifying user seller or not from db
+//api for verifying user buyers or not from db
 app.get('/users/buyer/:email', async (req, res) => {
     try {
         const email = req.params.email
@@ -334,9 +338,12 @@ app.post('/bookings', async (req, res) => {
         res.send(error.message)
     }
 })
+
+//api for getting booking info for a singel user
 app.get('/bookings', async (req, res) => {
     try {
-        const query = {}
+        const email = req.query.email
+        const query = { buyer_email: email }
         const result = await BookingsCollection.find(query).toArray()
         res.send(result)
     }
@@ -344,6 +351,85 @@ app.get('/bookings', async (req, res) => {
         res.send(error.message)
     }
 })
+
+//api for getting booking info for a singel product
+app.get('/booking/:id', async (req, res) => {
+    try {
+        const id = req.params.id
+        const query = { _id: ObjectId(id) }
+        console.log(query);
+        const result = await BookingsCollection.findOne(query)
+        res.send(result)
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+
+//---------------api's for payment task--------------------------//
+
+//api for payment gateway...
+app.post('/create-payment-intent', async (req, res) => {
+    try {
+        const booking = req.body
+        const price = booking.product_price
+        const amount = parseInt(price * 100)
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            currency: 'BDT',
+            amount: amount,
+            "payment_method_types": [
+                "card"
+            ],
+        });
+        res.send({
+            clientSecret: paymentIntent.client_secret,
+        });
+    }
+    catch (error) {
+        res.send(error.message)
+    }
+})
+
+//api for store payments data
+app.post('/payments', async (req, res) => {
+    try {
+        const payment = req.body
+        const result = await PaymentsCollection.insertOne(payment)
+        const id = payment.bookingId
+        const prodId = payment.product_id
+
+        //updaing paid status in booking
+        const filter = { _id: ObjectId(id) }
+        const updateDoc = {
+            $set: {
+                paid: true,
+                transactionId: payment.transactionId
+            }
+        }
+        const updateResult = await BookingsCollection.updateOne(filter, updateDoc)
+
+        //updaing paid status in productscollection
+        const filter2 = { _id: ObjectId(prodId) }
+        const updateDoc2 = {
+            $set: {
+                paid: true,
+            }
+        }
+        const updateResult2 = await ProductsCollection.updateOne(filter2, updateDoc2)
+
+        //sending the result of inserting data in payment.
+        res.send(result)
+
+    }
+    catch (error) {
+        res.send({ message: result })
+    }
+})
+
+
+//-----------------------JWT token ---------------------//
 
 //api for issue a access token
 app.get('/jwt', async (req, res) => {
