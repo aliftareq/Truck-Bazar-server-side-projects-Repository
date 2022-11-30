@@ -1,6 +1,6 @@
 # Truck Bazar server side projects Repository
 
-A server & database are made for Truck Bazar services and single service details data.
+A server & database are made for Truck Bazar Product and authorizatin integration with client side.
  
 ***
 ## What was done in this project(Description):
